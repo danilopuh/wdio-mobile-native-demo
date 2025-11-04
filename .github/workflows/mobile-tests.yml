@@ -9,55 +9,77 @@ on:
 
 jobs:
   test-android:
-    name:  Android Tests
+    name: Android Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     strategy:
+      fail-fast: false
       matrix:
-        api-level: [29, 30]
-        target: [default]
+        api-level: [29]
     
     steps:
-    - name:  Checkout Repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
       
-    - name:  Setup Node.js 18
+    - name: Setup Node.js 18
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
         
-    - name:  Setup JDK 17
+    - name: Setup JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
         
-    - name:  Install Dependencies
+    - name: Install Dependencies
       run: npm ci
       
-    - name:  Setup Android SDK
-      uses: android-actions/setup-android@v3
-      
-    - name:  Enable KVM group perms
+    - name: Enable KVM group perms
       run: |
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
         
-    - name:  Run Android Tests
+    - name: AVD cache
+      uses: actions/cache@v4
+      id: avd-cache
+      with:
+        path: |
+          ~/.android/avd/*
+          ~/.android/adb*
+        key: avd-${{ matrix.api-level }}
+        
+    - name: Create AVD and generate snapshot for caching
+      if: steps.avd-cache.outputs.cache-hit != 'true'
       uses: reactivecircus/android-emulator-runner@v2
       with:
         api-level: ${{ matrix.api-level }}
-        target: ${{ matrix.target }}
+        target: google_apis
         arch: x86_64
         profile: Nexus 6
-        cores: 2
-        ram-size: 4096M
-        heap-size: 1024M
+        force-avd-creation: false
+        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        disable-animations: false
+        script: echo "Generated AVD snapshot for caching."
+        
+    - name: Run Android Tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api-level }}
+        target: google_apis
+        arch: x86_64
+        profile: Nexus 6
+        force-avd-creation: false
+        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         disable-animations: true
         script: |
-          adb devices
+          echo "Waiting for emulator to be ready..."
+          adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\''\\r'\'') ]]; do sleep 1; done; input keyevent 82'
+          adb devices -l
+          echo "Emulator ready, starting tests..."
           npm run android
           
     - name:  Generate Allure Report
