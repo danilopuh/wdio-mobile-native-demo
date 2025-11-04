@@ -2,7 +2,9 @@
 
 Automação mobile com **WebdriverIO + Appium**, **Mocha/Chai**, **Page Objects**, **Allure**, execução em **Android/iOS** e integração opcional com **BrowserStack** e **GitLab CI**.
 
-🔗 **Repositório**: https://github.com/danilopuh/wdio-mobile-native-demo
+ **Repositório**: https://github.com/danilopuh/wdio-mobile-native-demo
+
+[![ WDIO Mobile Tests](https://github.com/danilopuh/wdio-mobile-native-demo/workflows/%F0%9F%A4%96%20WDIO%20Mobile%20Tests/badge.svg)](https://github.com/danilopuh/wdio-mobile-native-demo/actions)
 
 ##  Pré-requisitos
 
