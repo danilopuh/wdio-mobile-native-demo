@@ -1,0 +1,28 @@
+image: node:18
+
+stages:
+  - test
+
+cache:
+  paths:
+    - node_modules/
+
+variables:
+  CI: "true"
+
+before_script:
+  - apt-get update && apt-get install -y openjdk-17-jre-headless curl unzip
+  - npm ci
+  # Appium server will be started by WDIO service
+  # Android SDK setup would be required on the runner for real device/emulator
+
+test:android:
+  stage: test
+  script:
+    - npm run android
+  artifacts:
+    when: always
+    paths:
+      - allure-results
+      - reports
+    expire_in: 7 days

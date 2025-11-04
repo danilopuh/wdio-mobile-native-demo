@@ -1,0 +1,153 @@
+name:  WDIO Mobile Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-android:
+    name:  Android Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        api-level: [29, 30]
+        target: [default]
+    
+    steps:
+    - name:  Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name:  Setup Node.js 18
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name:  Setup JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name:  Install Dependencies
+      run: npm ci
+      
+    - name:  Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name:  Enable KVM group perms
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+        
+    - name:  Run Android Tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api-level }}
+        target: ${{ matrix.target }}
+        arch: x86_64
+        profile: Nexus 6
+        cores: 2
+        ram-size: 4096M
+        heap-size: 1024M
+        disable-animations: true
+        script: |
+          adb devices
+          npm run android
+          
+    - name:  Generate Allure Report
+      if: always()
+      run: |
+        npm install -g allure-commandline
+        allure generate allure-results -o allure-report --clean
+    
+    - name:  Upload Allure Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-results-android-${{ matrix.api-level }}
+        path: |
+          allure-results/
+          allure-report/
+          reports/
+        retention-days: 7
+        
+    - name:  Upload Screenshots on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: screenshots-android-${{ matrix.api-level }}
+        path: reports/screenshots/
+        retention-days: 3
+
+  test-browserstack:
+    name:  BrowserStack Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name:  Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name:  Setup Node.js 18
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name:  Install Dependencies
+      run: npm ci
+      
+    - name:  Run iOS Tests on BrowserStack
+      env:
+        BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+        BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        BS_APP_ID: ${{ secrets.BS_APP_ID }}
+        BUILD_NAME: "GitHub Actions - ${{ github.run_number }}"
+      run: npm run bs
+      
+    - name:  Generate Allure Report
+      if: always()
+      run: |
+        npm install -g allure-commandline
+        allure generate allure-results -o allure-report --clean
+        
+    - name:  Upload BrowserStack Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-results-browserstack
+        path: |
+          allure-results/
+          allure-report/
+        retention-days: 7
+
+  deploy-report:
+    name:  Deploy Allure Report
+    runs-on: ubuntu-latest
+    needs: [test-android]
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name:  Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: allure-results-*
+        merge-multiple: true
+        
+    - name:  Merge and Generate Final Report
+      run: |
+        npm install -g allure-commandline
+        allure generate allure-results -o final-report --clean
+        
+    - name:  Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./final-report
+        destination_dir: allure-report

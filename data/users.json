@@ -1,0 +1,34 @@
+{
+  "validUsers": [
+    {
+      "username": "standard_user",
+      "password": "secret_sauce"
+    },
+    {
+      "username": "locked_out_user",
+      "password": "secret_sauce"
+    }
+  ],
+  "invalidUsers": [
+    {
+      "username": "wrong_user",
+      "password": "wrong_pass"
+    },
+    {
+      "username": "",
+      "password": "secret_sauce"
+    }
+  ],
+  "signup": [
+    {
+      "email": "qa+1@example.com",
+      "password": "P@ssw0rd1",
+      "name": "QA One"
+    },
+    {
+      "email": "qa+2@example.com",
+      "password": "P@ssw0rd2",
+      "name": "QA Two"
+    }
+  ]
+}
