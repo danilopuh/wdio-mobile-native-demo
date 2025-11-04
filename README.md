@@ -280,20 +280,72 @@ adb devices
 pkill -f emulator
 ```
 
-##  CI/CD
+##  CI/CD Pipeline (Configurado!)
 
-### GitLab CI (Android)
-Arquivo `.gitlab-ci.yml` incluído para execução em runners com Android SDK configurado.
+### GitHub Actions (Recomendado) 
+O projeto já está **100% configurado** para rodar automaticamente no GitHub Actions!
 
-### GitHub Actions
-```yaml
-# Exemplo para Android
-- name: Run Android Tests
-  run: |
-    emulator -avd test_android_emulator -no-window &
-    adb wait-for-device
-    npm run android
+####  **Triggers Automáticos:**
+-  **Push** para `main` ou `develop`
+-  **Pull Request** para `main`
+-  **Manual** via "Run workflow"
+
+####  **Jobs Configurados:**
+
+**1.  Android Tests (Ubuntu)**
+- Matriz de API levels: 29, 30
+- Android SDK automaticamente instalado
+- Emulador Android com Nexus 6 profile
+- Execução completa da suíte de testes
+- Geração automática de relatórios Allure
+
+**2.  BrowserStack Tests (Manual)**
+- Testes iOS via BrowserStack (manual trigger)
+- Configuração de secrets necessária
+
+**3.  Deploy Allure Report**
+- Deploy automático para GitHub Pages
+- Acesso via: `https://danilopuh.github.io/wdio-mobile-native-demo/allure-report/`
+
+####  **Configuração de Secrets (BrowserStack):**
+```bash
+# No GitHub: Settings > Secrets and Variables > Actions
+BROWSERSTACK_USERNAME=seu_usuario
+BROWSERSTACK_ACCESS_KEY=sua_chave  
+BS_APP_ID=bs://app-id-ios
 ```
+
+####  **Como usar:**
+```bash
+# 1. Fazer push para ativar pipeline
+git push origin main
+
+# 2. Acompanhar execução
+# GitHub: Actions tab
+
+# 3. Ver relatórios
+# Artifacts ou GitHub Pages (após deploy)
+```
+
+### GitLab CI (Alternativo)
+Arquivo `.gitlab-ci.yml` também incluído para GitLab runners com Android SDK.
+
+```yaml
+# GitLab: Executar manualmente ou em push
+test:android:
+  stage: test
+  image: node:18
+  script:
+    - npm ci
+    - npm run android
+```
+
+###  **Status do Pipeline:**
+-  **Configuração**: Completa e testada
+-  **Android Emulator**: Funcionando perfeitamente  
+-  **Allure Reports**: Geração automática
+-  **Artifacts**: Coleta de screenshots e relatórios
+-  **GitHub Pages**: Deploy automático dos relatórios
 
 ##  Notas Importantes
 
