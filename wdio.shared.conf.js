@@ -6,6 +6,9 @@ exports.config = {
   specs: [
     './test/specs/**/*.e2e.js'
   ],
+  exclude: [
+    './test/specs/test.e2e.js' // Arquivo removido mas pode estar em cache
+  ],
   maxInstances: 1,
   capabilities: [], // filled by platform-specific configs
   logLevel: 'info',

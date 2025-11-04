@@ -23,7 +23,42 @@ describe('Fluxo E2E - login + navegar + form', () => {
       
       // 3. Aguardar elementos ficarem disponíveis e navegar para forms
       await browser.pause(2000); // Aguarda interface estabilizar
-      await Home.openForms();
+      
+      // Estratégia robusta para encontrar o botão Forms
+      let formsFound = false;
+      const formsSelectors = [
+        () => $('~Forms'),
+        () => $('android=new UiSelector().text("Forms")'),
+        () => $('android=new UiSelector().textContains("Forms")'),
+        () => $('android=new UiSelector().description("Forms")'),
+        () => $('android=new UiSelector().className("android.widget.Button").textContains("Forms")')
+      ];
+      
+      for (let i = 0; i < formsSelectors.length; i++) {
+        try {
+          console.log(`Trying forms selector ${i + 1}...`);
+          const formsElement = formsSelectors[i]();
+          await formsElement.waitForDisplayed({ timeout: 5000 });
+          await formsElement.click();
+          console.log(`Forms selector ${i + 1} worked!`);
+          formsFound = true;
+          break;
+        } catch (error) {
+          console.log(`Forms selector ${i + 1} failed: ${error.message}`);
+          continue;
+        }
+      }
+      
+      if (!formsFound) {
+        console.log('Forms button not found with any selector, trying menu navigation...');
+        await Home.openMenu();
+        await browser.pause(2000);
+        const formsViaMenu = $('~Forms');
+        await formsViaMenu.waitForDisplayed({ timeout: 5000 });
+        await formsViaMenu.click();
+      }
+      
+      await browser.pause(3000); // Aguarda navegação para forms
       
       // 4. Preencher o formulário
       await Forms.fillForm('Teste E2E', false);
